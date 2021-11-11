@@ -3,13 +3,14 @@ import os
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 import random
 import requests
+import redis
 
 
 class BrikeStot:
-    def __init__(self, warns):
+    def __init__(self):
         self.vk_session = vk_api.vk_api.VkApiGroup(token=os.environ['BRIKE_STOT_TOKEN'])
+        self.warns = redis.from_url(os.environ.get("REDIS_URL"))
         self.vk = self.vk_session.get_api()
-        self.warns = warns
         self.commands = {'пред': self.warn, 'не понял': self.unwarn, 'кик': self.kick,
                          'че там': self.check, 'чё там': self.check, 'амнистия': self.pardon}
         self.settings = {2000000001: {'no_bots': 1, 'fun': 0, 'no_bombs': 1, 'is_channel': 0},  # админский чат
@@ -26,12 +27,15 @@ class BrikeStot:
             hashtag = f'user{warned_id}'
         elif warned_id < 0:
             hashtag = f'group{abs(warned_id)}'
-        self.warns[(warned_id, peer_id)] = self.warns.get((warned_id, peer_id), 0) + 1
-        if self.warns[(warned_id, peer_id)] < 3:
+        if not self.warns.exists(f"warns_{warned_id}_{peer_id}"):
+            self.warns.set(f"warns_{warned_id}_{peer_id}", 1)
+        else:
+            self.warns.set(f"warns_{warned_id}_{peer_id}", self.warns.get(f"warns_{warned_id}_{peer_id}") + 1)
+        current_warns = self.warns.get(f"warns_{warned_id}_{peer_id}")
+        if current_warns < 3:
             self.vk.messages.send(random_id=random.randint(0, 2 ** 64),
                                   peer_id=peer_id,
-                                  message=f'Вам вынесено предупреждение ({self.warns[(warned_id, peer_id)]} '
-                                          f'из 3). '
+                                  message=f'Вам вынесено предупреждение ({current_warns} из 3). '
                                           f'Старайтесь общаться более культурно, '
                                           f'иначе придется с вами попрощаться. '
                                           f'#{hashtag}')
@@ -52,12 +56,17 @@ class BrikeStot:
             hashtag = f'user{warned_id}'
         elif warned_id < 0:
             hashtag = f'group{abs(warned_id)}'
-        if self.warns.get((warned_id, peer_id), 0) > 0:
-            self.warns[(warned_id, peer_id)] -= 1
-            self.vk.messages.send(random_id=random.randint(0, 2 ** 64),
-                                  peer_id=peer_id,
-                                  message=f'Извини, был не прав, снимаю тебе пред. '
-                                          f'({self.warns[(warned_id, peer_id)]} из 3) #{hashtag}')
+        if not self.warns.exists(f"warns_{warned_id}_{peer_id}"):
+            self.warns.set(f"warns_{warned_id}_{peer_id}", 0)
+        else:
+            current_warns = self.warns.get(f"warns_{warned_id}_{peer_id}")
+            if current_warns > 0:
+                current_warns -= 1
+                self.warns.set(f"warns_{warned_id}_{peer_id}", current_warns)
+                self.vk.messages.send(random_id=random.randint(0, 2 ** 64),
+                                      peer_id=peer_id,
+                                      message=f'Извини, был не прав, снимаю тебе пред. '
+                                              f'({current_warns} из 3) #{hashtag}')
 
     def kick(self, kicked_id, peer_id, admin_id):
         hashtag = ''
@@ -85,9 +94,11 @@ class BrikeStot:
             hashtag = f'user{checked_id}'
         elif checked_id < 0:
             hashtag = f'group{abs(checked_id)}'
+        if not self.warns.exists(f"warns_{checked_id}_{peer_id}"):
+            self.warns.set(f"warns_{checked_id}_{peer_id}", 0)
         self.vk.messages.send(random_id=random.randint(0, 2 ** 64),
                               peer_id=peer_id,
-                              message=f'Вынесено {self.warns.get((checked_id, peer_id), 0)} '
+                              message=f'Вынесено {self.warns.get(f"warns_{checked_id}_{peer_id}")} '
                                       f'из 3 предупреждений. #{hashtag}')
 
     def pardon(self, pardon_id, peer_id, admin_id):
@@ -101,11 +112,14 @@ class BrikeStot:
         elif pardon_id < 0:
             hashtag = f'group{abs(pardon_id)}'
             tag = f'@club{abs(pardon_id)}'
-        if self.warns.get((pardon_id, peer_id), 0) > 0:
-            self.warns[(pardon_id, peer_id)] = 0
-            self.vk.messages.send(random_id=random.randint(0, 2 ** 64),
-                                  peer_id=peer_id,
-                                  message=f'Извини, {tag}. #{hashtag}')
+        if not self.warns.exists(f"warns_{pardon_id}_{peer_id}"):
+            self.warns.set(f"warns_{pardon_id}_{peer_id}", 0)
+        else:
+            if self.warns.get(f"warns_{pardon_id}_{peer_id}") > 0:
+                self.warns.set(f"warns_{pardon_id}_{peer_id}", 0)
+                self.vk.messages.send(random_id=random.randint(0, 2 ** 64),
+                                      peer_id=peer_id,
+                                      message=f'Извини, {tag}. #{hashtag}')
 
     def send_exception(self, ex):
         ex = str(ex)
@@ -270,18 +284,15 @@ class BrikeStot:
                         self.fun_check(bool(message.get('reply_message')), peer_id)
 
 
-warns = dict()
 while True:
     try:
         try:
-            brike_stot = BrikeStot(warns)
+            brike_stot = BrikeStot()
             brike_stot.listen()
         except requests.exceptions.ReadTimeout:
-            warns = brike_stot.warns
             del brike_stot
         except Exception as e:
             brike_stot.send_exception(e)
-            warns = brike_stot.warns
             del brike_stot
     except Exception as e:
         print(e)
