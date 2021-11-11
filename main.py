@@ -30,8 +30,8 @@ class BrikeStot:
         if not self.warns.exists(f"warns_{warned_id}_{peer_id}"):
             self.warns.set(f"warns_{warned_id}_{peer_id}", 1)
         else:
-            self.warns.set(f"warns_{warned_id}_{peer_id}", self.warns.get(f"warns_{warned_id}_{peer_id}") + 1)
-        current_warns = self.warns.get(f"warns_{warned_id}_{peer_id}")
+            self.warns.set(f"warns_{warned_id}_{peer_id}", int(self.warns.get(f"warns_{warned_id}_{peer_id}")) + 1)
+        current_warns = int(self.warns.get(f"warns_{warned_id}_{peer_id}"))
         if current_warns < 3:
             self.vk.messages.send(random_id=random.randint(0, 2 ** 64),
                                   peer_id=peer_id,
@@ -59,7 +59,7 @@ class BrikeStot:
         if not self.warns.exists(f"warns_{warned_id}_{peer_id}"):
             self.warns.set(f"warns_{warned_id}_{peer_id}", 0)
         else:
-            current_warns = self.warns.get(f"warns_{warned_id}_{peer_id}")
+            current_warns = int(self.warns.get(f"warns_{warned_id}_{peer_id}"))
             if current_warns > 0:
                 current_warns -= 1
                 self.warns.set(f"warns_{warned_id}_{peer_id}", current_warns)
@@ -98,7 +98,7 @@ class BrikeStot:
             self.warns.set(f"warns_{checked_id}_{peer_id}", 0)
         self.vk.messages.send(random_id=random.randint(0, 2 ** 64),
                               peer_id=peer_id,
-                              message=f'Вынесено {self.warns.get(f"warns_{checked_id}_{peer_id}")} '
+                              message=f'Вынесено {int(self.warns.get(f"warns_{checked_id}_{peer_id}"))} '
                                       f'из 3 предупреждений. #{hashtag}')
 
     def pardon(self, pardon_id, peer_id, admin_id):
@@ -115,7 +115,7 @@ class BrikeStot:
         if not self.warns.exists(f"warns_{pardon_id}_{peer_id}"):
             self.warns.set(f"warns_{pardon_id}_{peer_id}", 0)
         else:
-            if self.warns.get(f"warns_{pardon_id}_{peer_id}") > 0:
+            if int(self.warns.get(f"warns_{pardon_id}_{peer_id}")) > 0:
                 self.warns.set(f"warns_{pardon_id}_{peer_id}", 0)
                 self.vk.messages.send(random_id=random.randint(0, 2 ** 64),
                                       peer_id=peer_id,
