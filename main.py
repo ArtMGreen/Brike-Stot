@@ -1,4 +1,5 @@
 import vk_api
+import os
 from vk_api.bot_longpoll import VkBotLongPoll, VkBotEventType
 import random
 import requests
