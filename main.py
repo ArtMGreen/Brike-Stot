@@ -192,51 +192,48 @@ class BrikeStot:
                                           f'беседе «{chat_name}» по ссылке',
                                   disable_mentions=1)
 
-    def fun_warn(self, has_reply, peer_id):
+    def fun_warn(self, has_reply, peer_id, possible_warnee_id):
         if has_reply:
-            self.vk.messages.send(random_id=random.randint(0, 2 ** 64),
-                                  peer_id=peer_id, expire_ttl=60,
-                                  message=f'Извини, был не прав, снимаю тебе пред. '
-                                          f'(0 из {random.randint(-10, 0)})')
+            self.warn(possible_warnee_id, peer_id, -190805980)
         else:
             self.vk.messages.send(random_id=random.randint(0, 2 ** 64),
                                   peer_id=peer_id, expire_ttl=60,
-                                  message='пред')
+                                  message='Бегом в палату.')
 
     def fun_unwarn(self, has_reply, peer_id):
+        wojak_stupid = ('photo-190805980_457239040', 'photo-190805980_457239041', 'photo-190805980_457239042',
+                        'photo-190805980_457239043', 'photo-190805980_457239044', 'photo-190805980_457239045',
+                        'photo-190805980_457239046', 'photo-190805980_457239047', 'photo-190805980_457239048',
+                        'photo-190805980_457239049', 'photo-190805980_457239050', 'photo-190805980_457239051',
+                        'photo-190805980_457239052', 'photo-190805980_457239053', 'photo-190805980_457239054',
+                        'photo-190805980_457239055', 'photo-190805980_457239056', 'photo-190805980_457239057',
+                        'photo-190805980_457239058', 'photo-190805980_457239059', 'photo-190805980_457239060')
         if has_reply:
             self.vk.messages.send(random_id=random.randint(0, 2 ** 64),
                                   peer_id=peer_id, expire_ttl=60,
-                                  message=f'Вам вынесено предупреждение ({random.randint(0, 10)} из 0). '
-                                          f'Старайтесь общаться более культурно, перечитайте правила беседы, '
-                                          f'иначе придется с вами попрощаться.')
+                                  attachment=random.choice(wojak_stupid))
         else:
             self.vk.messages.send(random_id=random.randint(0, 2 ** 64),
                                   peer_id=peer_id, expire_ttl=60,
-                                  message='Что ты не понял?')
+                                  attachment=random.choice(wojak_stupid))
 
     def zhalomba(self, has_reply, peer_id):
         if has_reply:
             self.vk.messages.send(random_id=random.randint(0, 2 ** 64),
                                   peer_id=peer_id, expire_ttl=60,
-                                  message=random.choice(('пред', 'кик')))
+                                  message=random.choice(('Маме пожалуйся', 'В школе расскажешь')))
         else:
             self.vk.messages.send(random_id=random.randint(0, 2 ** 64),
                                   peer_id=peer_id, expire_ttl=60,
-                                  message=random.choice(('жалаба', 'жолоба', 'жаломба', 'жаба',
-                                                         'жожоба', 'Замечание Вам.')))
+                                  message=random.choice(('Маме пожалуйся', 'В школе расскажешь')))
 
-    def fun_check(self, has_reply, peer_id):
-        if has_reply:
-            self.vk.messages.send(random_id=random.randint(0, 2 ** 64),
-                                  peer_id=peer_id, expire_ttl=60,
-                                  message=random.choice(('Вынесено 28 предупреждений.',
-                                                         'Вынесено 0 из 28 предупреждений.',
-                                                         '10 из 10 предупреждений!')))
+    def fun_check(self, reply_id, peer_id):
+        if reply_id:
+            self.check(reply_id, peer_id, -190805980)
         else:
             self.vk.messages.send(random_id=random.randint(0, 2 ** 64),
                                   peer_id=peer_id, expire_ttl=60,
-                                  message=random.choice(('че там с деньгами?',
+                                  message=random.choice(('ничё там',
                                                          'ничё и не там!')))
 
     def listen(self):
@@ -272,17 +269,19 @@ class BrikeStot:
                                             peer_id=peer_id,
                                             conversation_message_ids=[message['conversation_message_id']])
                 # если включены игровые команды
-                elif self.settings[peer_id]['fun'] and message['from_id'] > 0:
+                elif self.settings[peer_id]['fun']:
                     if message['text'].lower() == 'не понял':
                         self.fun_unwarn(bool(message.get('reply_message')), peer_id)
                     elif message['text'].lower() == 'пред':
-                        self.fun_warn(bool(message.get('reply_message')), peer_id)
-                    elif message['text'].lower() in ('#жалоба', '#жалаба', '#жолоба', '#жаломба',
-                                                     '#жаба', '#жожоба', 'жалоба', 'жалаба',
-                                                     'жолоба', 'жаломба', 'жаба', 'жожоба'):
+                        self.fun_warn(bool(message.get('reply_message')), peer_id, message['from_id'])
+                    elif message['text'].lower() in ('#жалоба', 'жалоба'):
                         self.zhalomba(bool(message.get('reply_message')), peer_id)
                     elif message['text'].lower() in ('че там', 'чё там'):
-                        self.fun_check(bool(message.get('reply_message')), peer_id)
+                        reply_msg = message.get('reply_message')
+                        if reply_msg:
+                            self.fun_check(reply_msg['from_id'], peer_id)
+                        else:
+                            self.fun_check(0, peer_id)
 
 
 while True:
