@@ -13,11 +13,12 @@ class BrikeStot:
         self.vk = self.vk_session.get_api()
         self.commands = {'пред': self.warn, 'не понял': self.unwarn, 'кик': self.kick,
                          'че там': self.check, 'чё там': self.check, 'амнистия': self.pardon}
-        self.settings = {2000000001: {'no_bots': 1, 'fun': 0, 'no_bombs': 1, 'is_channel': 0},  # админский чат
+        self.settings = {2000000001: {'no_bots': 1, 'fun': 0, 'no_bombs': 1, 'is_channel': 0},  # Admins'
                          2000000002: {'no_bots': 1, 'fun': 0, 'no_bombs': 1, 'is_channel': 0},  # шуетологи
                          2000000003: {'no_bots': 0, 'fun': 0, 'no_bombs': 0, 'is_channel': 0},  # чат-боты
                          2000000004: {'no_bots': 1, 'fun': 0, 'no_bombs': 1, 'is_channel': 1},  # чат уведомлений
-                         2000000005: {'no_bots': 1, 'fun': 0, 'no_bombs': 1, 'is_channel': 0}}  # чат по правилам
+                         2000000005: {'no_bots': 1, 'fun': 0, 'no_bombs': 1, 'is_channel': 0},  # чат по правилам
+                         2000000006: {'no_bots': 0, 'fun': 1, 'no_bombs': 0, 'is_channel': 0}}  # Alisultan's
 
     def warn(self, warned_id, peer_id, admin_id):
         hashtag = ''
